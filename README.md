@@ -40,4 +40,4 @@ GitHub Actions builds and deploys pushes to main with GitHub Pages. The project 
 
 ## Scope
 
-The seven projects are Frontend Demos; backend services and real transactions are not represented as working integrations. The inquiry form prepares a draft in the visitor's email app; the visitor completes sending there. No email is automatically sent by a backend. Direct contact links remain available. Resume download is not available until a PDF is provided.
+The seven projects are Frontend Demos; backend services and real transactions are not represented as working integrations. The inquiry form opens a draft in Gmail in the browser, with an optional default-email-app choice and a visible fallback draft link; the visitor completes sending there. No email is automatically sent by a backend. Direct contact links remain available. Resume download serves the supplied AyatNassar-CV.pdf.

@@ -1,5 +1,6 @@
 import { PROJECTS } from "./projects.js";
 import { createContactDraft } from "./contact.js";
+import resumeUrl from "../public/AyatNassar-CV.pdf?url";
 import frameStyles from "./frame.generated.css?raw";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import originalPortfolioHtml from "../code.html?raw";
@@ -19,7 +20,6 @@ const frameEnDictionary = {
   explore: "Explore Works",
   talk: "Let's Talk",
   resume: "Resume",
-  resumeSoon: "The resume is not available for download yet. Please contact Ayat by email.",
   figmaProof: "Figma to React Precision",
   rtlProof: "Dual RTL/LTR Engine",
   performance: "99.9% Performance Score",
@@ -101,11 +101,15 @@ const frameEnDictionary = {
   serviceAdvisory: "Technical Advisory & Code Review",
   scope: "Scope & Objectives",
   scopePlaceholder: "Outline your technical requirements, goals, timelines, or specifications...",
-  secure: "Send from your preferred email app",
+  secure: "Review and send the draft yourself",
   send: "Open email draft",
   sending: "Preparing email...",
   sent: "Draft ready",
-  success: "Send the prepared draft from your email app to complete your inquiry. Your message stays here until you send it.",
+  success: "A draft is ready. Complete sending in Gmail or your email app; nothing has been sent yet. If no window opened, use the link below.",
+  emailProvider: "Open draft with",
+  gmailProvider: "Gmail in the browser",
+  appProvider: "Default email app (requires setup)",
+  openDraft: "Open the prepared draft",
   nativeMetric: "Native",
   coverageFrontend: "Coverage: 98%",
   masteryFrontend: "Mastery: Core",
@@ -151,7 +155,6 @@ const frameArDictionary = {
   explore: "استكشاف الأعمال",
   talk: "لنتحدث",
   resume: "السيرة الذاتية",
-  resumeSoon: "السيرة الذاتية غير متاحة للتحميل حالياً. يمكنك التواصل مع آيات عبر البريد.",
   figmaProof: "دقة في التحويل من Figma إلى React",
   rtlProof: "دعم RTL وLTR",
   performance: "أداء بنسبة ٩٩٫٩٪",
@@ -233,11 +236,15 @@ const frameArDictionary = {
   serviceAdvisory: "استشارة تقنية ومراجعة كود",
   scope: "النطاق والأهداف",
   scopePlaceholder: "اشرح المتطلبات والأهداف والمدة المتوقعة...",
-  secure: "أكملي الإرسال من تطبيق البريد",
+  secure: "راجعي المسودة وأكملي الإرسال بنفسك",
   send: "فتح مسودة بريد",
   sending: "جارٍ تجهيز المسودة...",
   sent: "المسودة جاهزة",
-  success: "أكملي إرسال المسودة من تطبيق البريد لتصل رسالتك. تبقى التفاصيل هنا إلى أن ترسليها.",
+  success: "المسودة جاهزة. أكملي إرسالها من Gmail أو تطبيق البريد؛ لم تُرسل الرسالة بعد. إذا لم تفتح نافذة، استخدمي الرابط أدناه.",
+  emailProvider: "فتح المسودة باستخدام",
+  gmailProvider: "Gmail من المتصفح",
+  appProvider: "تطبيق البريد الافتراضي (يحتاج إعداداً)",
+  openDraft: "فتح المسودة المجهّزة",
   nativeMetric: "دعم أصلي",
   coverageFrontend: "التغطية: 98%",
   masteryFrontend: "مستوى الإتقان: أساسي",
@@ -501,6 +508,15 @@ function OriginalPortfolio() {
     if (directContactTitle) directContactTitle.textContent = dictionary.directTelemetry;
     if (resumeButton) resumeButton.setAttribute("aria-label", dictionary.resume);
     if (resumeButtonLabel) resumeButtonLabel.textContent = dictionary.resume;
+    const providerLabel = frameDocument.getElementById("contact-provider-label");
+    if (providerLabel) providerLabel.textContent = dictionary.emailProvider;
+    const providerSelect = frameDocument.getElementById("contact-provider");
+    if (providerSelect) {
+      providerSelect.options[0].textContent = dictionary.gmailProvider;
+      providerSelect.options[1].textContent = dictionary.appProvider;
+    }
+    const draftLink = frameDocument.getElementById("contact-draft-link");
+    if (draftLink) draftLink.textContent = dictionary.openDraft;
     if (rtlProofLabel) {
       rtlProofLabel.innerHTML = language === "ar"
         ? 'دعم <bdi dir="ltr">RTL / LTR</bdi>'
@@ -740,22 +756,13 @@ function OriginalPortfolio() {
     const heroActions = frameDocument.querySelector('main a[href="#featured-portfolio"]')?.parentElement;
     heroActions?.classList.add("portfolio-hero-actions");
     if (heroActions && !frameDocument.getElementById("portfolio-resume-btn")) {
-      const resumeButton = frameDocument.createElement("button");
-      resumeButton.type = "button";
+      const resumeButton = frameDocument.createElement("a");
+      resumeButton.href = resumeUrl;
+      resumeButton.download = "AyatNassar-CV.pdf";
       resumeButton.id = "portfolio-resume-btn";
       resumeButton.className = "portfolio-resume-btn";
       resumeButton.setAttribute("aria-label", frameEnDictionary.resume);
       resumeButton.innerHTML = '<span class="material-symbols-outlined text-[19px]">description</span><span id="portfolio-resume-label">Resume</span>';
-      resumeButton.addEventListener("click", () => {
-        const activeLanguage = frameDocument.documentElement.lang === "ar" ? "ar" : "en";
-        const dictionary = activeLanguage === "ar" ? frameArDictionary : frameEnDictionary;
-        frameDocument.querySelector(".portfolio-frame-toast")?.remove();
-        const toastElement = frameDocument.createElement("div");
-        toastElement.className = "portfolio-frame-toast";
-        toastElement.textContent = dictionary.resumeSoon;
-        frameDocument.body.appendChild(toastElement);
-        frameDocument.defaultView.setTimeout(() => toastElement.remove(), 3200);
-      });
       const contactButton = heroActions.querySelector('a[href="#contact"]');
       heroActions.insertBefore(resumeButton, contactButton ?? null);
     }
@@ -901,13 +908,17 @@ function OriginalPortfolio() {
       movedTowardNext ? handleNextProject() : handlePreviousProject();
     }, { passive: true });
     const contactForm = frameDocument.getElementById("portfolio-contact-form");
+    if (contactForm) {
+      const providerField = frameDocument.createElement("label");
+      providerField.style.cssText = "display:flex;flex-direction:column;gap:8px;font-size:13px;";
+      providerField.innerHTML = '<span id="contact-provider-label"></span><select id="contact-provider" style="width:100%;padding:12px;border-radius:12px;background:transparent;color:inherit;border:1px solid #7776"><option value="gmail" style="background:#fff;color:#171717"></option><option value="app" style="background:#fff;color:#171717"></option></select>';
+      contactForm.querySelector("#submit-btn")?.parentElement.before(providerField);
+    }
     contactForm?.removeAttribute("onsubmit");
     contactForm?.addEventListener("submit", (event) => {
       event.preventDefault();
       const activeLanguage = frameDocument.documentElement.lang === "ar" ? "ar" : "en";
       const dictionary = activeLanguage === "ar" ? frameArDictionary : frameEnDictionary;
-      const submitButton = frameDocument.getElementById("submit-btn");
-      const submitLabel = frameDocument.getElementById("submit-btn-label");
       const successBanner = frameDocument.getElementById("form-success-banner");
       const form = event.currentTarget;
       const draft = createContactDraft({
@@ -915,22 +926,30 @@ function OriginalPortfolio() {
         email: form.querySelector('input[type="email"]').value.trim(),
         service: form.querySelector("#contact-service").selectedOptions[0].textContent.trim(),
         message: form.querySelector("#contact-message").value.trim(),
-      }, activeLanguage);
-      window.location.href = draft;
-      if (submitButton) submitButton.disabled = true;
-      if (submitLabel) submitLabel.textContent = dictionary.sending;
-      window.setTimeout(() => {
-        if (submitLabel) submitLabel.textContent = dictionary.sent;
-        if (successBanner) {
-          successBanner.classList.remove("hidden");
-          const successText = successBanner.querySelector("span:last-child");
-          if (successText) successText.textContent = dictionary.success;
+      }, activeLanguage, form.querySelector("#contact-provider").value);
+      if (successBanner) {
+        successBanner.classList.remove("hidden");
+        successBanner.setAttribute("role", "status");
+        const successText = successBanner.querySelector("span:last-of-type");
+        if (successText) successText.textContent = dictionary.success;
+        let draftLink = frameDocument.getElementById("contact-draft-link");
+        if (!draftLink) {
+          draftLink = frameDocument.createElement("a");
+          draftLink.id = "contact-draft-link";
+          draftLink.style.cssText = "display:block;text-decoration:underline;flex-shrink:0";
+          successBanner.style.flexWrap = "wrap";
+          successBanner.appendChild(draftLink);
         }
-        window.setTimeout(() => {
-          if (submitButton) submitButton.disabled = false;
-          if (submitLabel) submitLabel.textContent = dictionary.send;
-        }, 2600);
-      }, 650);
+        draftLink.href = draft;
+        draftLink.target = "_blank";
+        draftLink.rel = "noopener noreferrer";
+        draftLink.textContent = dictionary.openDraft;
+      }
+      if (form.querySelector("#contact-provider").value === "gmail") {
+        window.open(draft, "_blank", "noopener,noreferrer");
+      } else {
+        window.location.href = draft;
+      }
     });
   }, [requestProjectChange]);
 
