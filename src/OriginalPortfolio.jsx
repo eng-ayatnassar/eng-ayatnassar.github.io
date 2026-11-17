@@ -1,4 +1,5 @@
 import { PROJECTS } from "./projects.js";
+import { createContactDraft } from "./contact.js";
 import frameStyles from "./frame.generated.css?raw";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import originalPortfolioHtml from "../code.html?raw";
@@ -18,7 +19,7 @@ const frameEnDictionary = {
   explore: "Explore Works",
   talk: "Let's Talk",
   resume: "Resume",
-  resumeSoon: "The resume button is ready. Add the PDF file to activate the download.",
+  resumeSoon: "The resume is not available for download yet. Please contact Ayat by email.",
   figmaProof: "Figma to React Precision",
   rtlProof: "Dual RTL/LTR Engine",
   performance: "99.9% Performance Score",
@@ -100,11 +101,11 @@ const frameEnDictionary = {
   serviceAdvisory: "Technical Advisory & Code Review",
   scope: "Scope & Objectives",
   scopePlaceholder: "Outline your technical requirements, goals, timelines, or specifications...",
-  secure: "Encrypted transit · NDA-ready",
-  send: "Send Message",
-  sending: "Preparing preview...",
-  sent: "Preview ready",
-  success: "This form is a preview. Please use the email or direct contact links to send your inquiry.",
+  secure: "Send from your preferred email app",
+  send: "Open email draft",
+  sending: "Preparing email...",
+  sent: "Draft ready",
+  success: "Send the prepared draft from your email app to complete your inquiry. Your message stays here until you send it.",
   nativeMetric: "Native",
   coverageFrontend: "Coverage: 98%",
   masteryFrontend: "Mastery: Core",
@@ -150,7 +151,7 @@ const frameArDictionary = {
   explore: "استكشاف الأعمال",
   talk: "لنتحدث",
   resume: "السيرة الذاتية",
-  resumeSoon: "زر السيرة الذاتية جاهز، وسيتم تفعيل التحميل بعد إضافة ملف PDF.",
+  resumeSoon: "السيرة الذاتية غير متاحة للتحميل حالياً. يمكنك التواصل مع آيات عبر البريد.",
   figmaProof: "دقة في التحويل من Figma إلى React",
   rtlProof: "دعم RTL وLTR",
   performance: "أداء بنسبة ٩٩٫٩٪",
@@ -232,11 +233,11 @@ const frameArDictionary = {
   serviceAdvisory: "استشارة تقنية ومراجعة كود",
   scope: "النطاق والأهداف",
   scopePlaceholder: "اشرح المتطلبات والأهداف والمدة المتوقعة...",
-  secure: "إرسال آمن · جاهزة لتوقيع اتفاقية سرية",
-  send: "إرسال الرسالة",
-  sending: "جارٍ التجهيز...",
-  sent: "تم التجهيز",
-  success: "هذا النموذج للمعاينة. لإرسال طلبك فعلياً، استخدمي البريد أو روابط التواصل المباشر.",
+  secure: "أكملي الإرسال من تطبيق البريد",
+  send: "فتح مسودة بريد",
+  sending: "جارٍ تجهيز المسودة...",
+  sent: "المسودة جاهزة",
+  success: "أكملي إرسال المسودة من تطبيق البريد لتصل رسالتك. تبقى التفاصيل هنا إلى أن ترسليها.",
   nativeMetric: "دعم أصلي",
   coverageFrontend: "التغطية: 98%",
   masteryFrontend: "مستوى الإتقان: أساسي",
@@ -280,6 +281,8 @@ const prepareOriginalHtml = () => originalPortfolioHtml
   .replace(/© 2025/g, "© 2026")
   .replace(/Shipped Full-Stack &amp; Front-End/g, () => frameEnDictionary.metricProjectsDetail)
   .replace(/Production Platforms/g, () => frameEnDictionary.metricProjectsTitle)
+  .replace(/Encrypted transit · NDA-ready/g, () => frameEnDictionary.secure)
+  .replace(/Send Message/g, () => frameEnDictionary.send)
   .replace(/Every project showcased below was designed in Figma from ground zero and coded cleanly as an engineering-grade front-end solution\./g, () => frameEnDictionary.projectsDescription)
   .replace(/Direct Telemetry/g, "Direct Contact")
   .replace(/Direct Message · @(ayat_dev|eng_ayatnassar)/g, "Direct Message @eng_ayatnassar")
@@ -440,6 +443,7 @@ const prepareOriginalHtml = () => originalPortfolioHtml
 
 function OriginalPortfolio() {
   const frameRef = useRef(null);
+  const initializedDocumentRef = useRef(null);
   const translationNodesRef = useRef([]);
   const [frameReady, setFrameReady] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(() => localStorage.getItem("ayatPortfolioLanguage") || "en");
@@ -601,6 +605,19 @@ function OriginalPortfolio() {
   }, [getDocument, requestProjectChange]);
 
   const setupInteractions = useCallback((frameDocument) => {
+    // Fragment links in srcDoc otherwise navigate the iframe to the parent URL.
+    frameDocument.addEventListener("click", (event) => {
+      const anchor = event.target.closest?.('a[href^="#"]');
+      if (!anchor || event.defaultPrevented) return;
+      const fragment = anchor.getAttribute("href").slice(1);
+      event.preventDefault();
+      if (!fragment) {
+        frameDocument.defaultView.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      const target = frameDocument.getElementById(decodeURIComponent(fragment));
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     const header = frameDocument.querySelector("header");
     const navbarInner = header?.firstElementChild;
     const navbarBrand = navbarInner?.children[0];
@@ -675,8 +692,12 @@ function OriginalPortfolio() {
         const activeCard = projectCarouselWrapper.querySelector('[data-position="active"]');
         if (activeCard) projectCarouselWrapper.style.height = `${activeCard.offsetHeight + 48}px`;
       };
-      const carouselResizeObserver = new frameDocument.defaultView.ResizeObserver(updateCarouselHeight);
-      projectCarouselWrapper.querySelectorAll(".portfolio-project-card").forEach((card) => carouselResizeObserver.observe(card));
+      if (frameDocument.defaultView.ResizeObserver) {
+        const carouselResizeObserver = new frameDocument.defaultView.ResizeObserver(updateCarouselHeight);
+        projectCarouselWrapper.querySelectorAll(".portfolio-project-card").forEach((card) => carouselResizeObserver.observe(card));
+      } else {
+        frameDocument.defaultView.addEventListener("resize", updateCarouselHeight);
+      }
       projectCarouselWrapper.querySelectorAll(".portfolio-project-card").forEach((projectCard) => {
         projectCard.addEventListener("click", (event) => {
           if (event.target.closest("a,button")) return;
@@ -777,7 +798,7 @@ function OriginalPortfolio() {
       }
     });
 
-    const revealObserver = new frameDocument.defaultView.IntersectionObserver((entries) => {
+    const revealObserver = frameDocument.defaultView.IntersectionObserver && new frameDocument.defaultView.IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add("is-visible");
@@ -787,7 +808,8 @@ function OriginalPortfolio() {
     }, { threshold: 0.08, rootMargin: "0px 0px -6% 0px" });
     frameDocument.querySelectorAll("main section").forEach((section) => {
       section.classList.add("portfolio-reveal");
-      revealObserver.observe(section);
+      if (revealObserver) revealObserver.observe(section);
+      else section.classList.add("is-visible");
     });
 
     frameDocument.querySelector('button[aria-label="Toggle Color Scheme"]')?.addEventListener("click", () => {
@@ -815,6 +837,10 @@ function OriginalPortfolio() {
           navbarLink.classList.toggle("text-on-surface-variant", !isActive);
         });
       });
+    });
+    frameDocument.querySelectorAll("[data-path]").forEach((navigationItem) => {
+      const path = navigationItem.getAttribute("data-path");
+      navigationItem.setAttribute("href", `#${path === "portfolio" ? "featured-portfolio" : path}`);
     });
     frameDocument.querySelectorAll(".skills-tab-btn").forEach((filterButton) => {
       filterButton.addEventListener("click", () => {
@@ -883,6 +909,14 @@ function OriginalPortfolio() {
       const submitButton = frameDocument.getElementById("submit-btn");
       const submitLabel = frameDocument.getElementById("submit-btn-label");
       const successBanner = frameDocument.getElementById("form-success-banner");
+      const form = event.currentTarget;
+      const draft = createContactDraft({
+        name: form.querySelector("#contact-name").value.trim(),
+        email: form.querySelector('input[type="email"]').value.trim(),
+        service: form.querySelector("#contact-service").selectedOptions[0].textContent.trim(),
+        message: form.querySelector("#contact-message").value.trim(),
+      }, activeLanguage);
+      window.location.href = draft;
       if (submitButton) submitButton.disabled = true;
       if (submitLabel) submitLabel.textContent = dictionary.sending;
       window.setTimeout(() => {
@@ -892,7 +926,6 @@ function OriginalPortfolio() {
           const successText = successBanner.querySelector("span:last-child");
           if (successText) successText.textContent = dictionary.success;
         }
-        contactForm.reset();
         window.setTimeout(() => {
           if (submitButton) submitButton.disabled = false;
           if (submitLabel) submitLabel.textContent = dictionary.send;
@@ -903,11 +936,23 @@ function OriginalPortfolio() {
 
   const handleFrameLoad = useCallback(() => {
     const frameDocument = getDocument();
-    if (!frameDocument) return;
+    if (!frameDocument?.body || frameDocument.readyState === "loading" || !frameDocument.getElementById("carousel-cards-wrapper")) return false;
+    if (initializedDocumentRef.current === frameDocument) return true;
     collectTranslationNodes(frameDocument);
     setupInteractions(frameDocument);
+    initializedDocumentRef.current = frameDocument;
     setFrameReady(true);
+    return true;
   }, [collectTranslationNodes, getDocument, setupInteractions]);
+
+  useEffect(() => {
+    let animationFrame;
+    const initializeWhenParsed = () => {
+      if (!handleFrameLoad()) animationFrame = window.requestAnimationFrame(initializeWhenParsed);
+    };
+    initializeWhenParsed();
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [handleFrameLoad]);
 
   useEffect(() => {
     localStorage.setItem("ayatPortfolioLanguage", currentLanguage);

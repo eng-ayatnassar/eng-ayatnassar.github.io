@@ -40,4 +40,4 @@ GitHub Actions builds and deploys pushes to main with GitHub Pages. The project 
 
 ## Scope
 
-The seven projects are Frontend Demos; backend services and real transactions are not represented as working integrations. The inquiry form is a preview and does not send messages; direct contact links remain available.
+The seven projects are Frontend Demos; backend services and real transactions are not represented as working integrations. The inquiry form prepares a draft in the visitor's email app; the visitor completes sending there. No email is automatically sent by a backend. Direct contact links remain available. Resume download is not available until a PDF is provided.
