@@ -106,9 +106,12 @@ const frameEnDictionary = {
   sending: "Preparing email...",
   sent: "Draft ready",
   success: "A draft is ready. Complete sending in Gmail or your email app; nothing has been sent yet. If no window opened, use the link below.",
-  emailProvider: "Open draft with",
-  gmailProvider: "Gmail in the browser",
-  appProvider: "Default email app (requires setup)",
+  emailProvider: "Where would you like to write your email?",
+  gmailProvider: "Gmail · In your browser",
+  appProvider: "Email app · Your device",
+  gmailHelp: "Use your Gmail account. You may be asked to sign in.",
+  appHelp: "Opens an app such as Outlook or Apple Mail. An email account must already be set up on your device.",
+  draftHelp: "This opens a draft. Review it and press Send in your email service.",
   openDraft: "Open the prepared draft",
   nativeMetric: "Native",
   coverageFrontend: "Coverage: 98%",
@@ -241,9 +244,12 @@ const frameArDictionary = {
   sending: "جارٍ تجهيز المسودة...",
   sent: "المسودة جاهزة",
   success: "المسودة جاهزة. أكملي إرسالها من Gmail أو تطبيق البريد؛ لم تُرسل الرسالة بعد. إذا لم تفتح نافذة، استخدمي الرابط أدناه.",
-  emailProvider: "فتح المسودة باستخدام",
-  gmailProvider: "Gmail من المتصفح",
-  appProvider: "تطبيق البريد الافتراضي (يحتاج إعداداً)",
+  emailProvider: "وين بتحب تكتب الإيميل؟",
+  gmailProvider: "Gmail · من المتصفح",
+  appProvider: "تطبيق البريد · على جهازك",
+  gmailHelp: "استخدم حسابك على Gmail. ممكن يُطلب منك تسجيل الدخول.",
+  appHelp: "يفتح تطبيقاً مثل Outlook أو Apple Mail. لازم يكون حساب بريدك مُعدّاً على الجهاز مسبقاً.",
+  draftHelp: "رح تفتح مسودة؛ راجعها واضغط «إرسال» من بريدك حتى توصل الرسالة.",
   openDraft: "فتح المسودة المجهّزة",
   nativeMetric: "دعم أصلي",
   coverageFrontend: "التغطية: 98%",
@@ -380,6 +386,17 @@ const prepareOriginalHtml = () => originalPortfolioHtml
     .portfolio-no-wrap { white-space:nowrap; }
     .portfolio-resume-btn { position:relative; isolation:isolate; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 20px; border-radius:12px; color:#fff; font:700 12px Manrope,sans-serif; letter-spacing:.06em; text-transform:uppercase; background:linear-gradient(110deg,#EC4899,#8B5CF6,#EC4899); background-size:220% 100%; box-shadow:0 12px 32px rgba(139,92,246,.24); animation:portfolio-resume-gradient 6s ease infinite; transition:transform .25s ease,box-shadow .25s ease; }
     .portfolio-resume-btn:hover { transform:translateY(-2px); box-shadow:0 18px 38px rgba(236,72,153,.3); }
+    .portfolio-mail-field { display:flex; flex-direction:column; gap:10px; margin:4px 0; min-width:0; }
+    .portfolio-mail-label { font-size:13px; font-weight:700; }
+    .portfolio-mail-control { display:flex; align-items:center; gap:12px; padding:0 14px; border:1px solid #8b7b915c; border-radius:14px; background:rgba(139,92,246,.07); transition:border-color .2s,box-shadow .2s; }
+    .portfolio-mail-control:hover { border-color:#b071b5; }
+    .portfolio-mail-control:focus-within { border-color:#ec4899; box-shadow:0 0 0 3px rgba(236,72,153,.14); }
+    .portfolio-mail-control > .material-symbols-outlined { color:#d768a6; font-size:21px; flex-shrink:0; pointer-events:none; }
+    .portfolio-mail-control select { appearance:none; -webkit-appearance:none; width:100%; min-width:0; min-height:54px; border:0; outline:0; background:transparent; color:inherit; font:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+    .portfolio-mail-control option { background:#202127; color:#f8f4fa; }
+    html.light .portfolio-mail-control option { background:#fff; color:#241d29; }
+    .portfolio-mail-help { margin:0; font-size:12px; line-height:1.8; opacity:.8; }
+    .portfolio-mail-note { margin:0; font-size:12px; line-height:1.8; opacity:.65; }
     .portfolio-resume-btn::after { content:""; position:absolute; inset:1px; z-index:-1; border-radius:11px; background:rgba(18,19,24,.74); backdrop-filter:blur(12px); }
     html.light .portfolio-resume-btn::after { background:rgba(255,255,255,.18); }
     @keyframes portfolio-resume-gradient { 0%,100%{background-position:0 50%} 50%{background-position:100% 50%} }
@@ -515,6 +532,10 @@ function OriginalPortfolio() {
       providerSelect.options[0].textContent = dictionary.gmailProvider;
       providerSelect.options[1].textContent = dictionary.appProvider;
     }
+    const providerHelp = frameDocument.getElementById("contact-provider-help");
+    if (providerHelp) providerHelp.textContent = providerSelect?.value === "app" ? dictionary.appHelp : dictionary.gmailHelp;
+    const draftHelp = frameDocument.getElementById("contact-draft-help");
+    if (draftHelp) draftHelp.textContent = dictionary.draftHelp;
     const draftLink = frameDocument.getElementById("contact-draft-link");
     if (draftLink) draftLink.textContent = dictionary.openDraft;
     if (rtlProofLabel) {
@@ -909,9 +930,13 @@ function OriginalPortfolio() {
     }, { passive: true });
     const contactForm = frameDocument.getElementById("portfolio-contact-form");
     if (contactForm) {
-      const providerField = frameDocument.createElement("label");
-      providerField.style.cssText = "display:flex;flex-direction:column;gap:8px;font-size:13px;";
-      providerField.innerHTML = '<span id="contact-provider-label"></span><select id="contact-provider" style="width:100%;padding:12px;border-radius:12px;background:transparent;color:inherit;border:1px solid #7776"><option value="gmail" style="background:#fff;color:#171717"></option><option value="app" style="background:#fff;color:#171717"></option></select>';
+      const providerField = frameDocument.createElement("div");
+      providerField.className = "portfolio-mail-field";
+      providerField.innerHTML = '<label for="contact-provider" class="portfolio-mail-label" id="contact-provider-label"></label><div class="portfolio-mail-control"><span class="material-symbols-outlined" aria-hidden="true">mail</span><select id="contact-provider" aria-describedby="contact-provider-help contact-draft-help"><option value="gmail"></option><option value="app"></option></select><span class="material-symbols-outlined" aria-hidden="true">expand_more</span></div><p class="portfolio-mail-help" id="contact-provider-help"></p><p class="portfolio-mail-note" id="contact-draft-help"></p>';
+      providerField.querySelector("select").addEventListener("change", (event) => {
+        const dictionary = frameDocument.documentElement.lang === "ar" ? frameArDictionary : frameEnDictionary;
+        providerField.querySelector("#contact-provider-help").textContent = event.target.value === "app" ? dictionary.appHelp : dictionary.gmailHelp;
+      });
       contactForm.querySelector("#submit-btn")?.parentElement.before(providerField);
     }
     contactForm?.removeAttribute("onsubmit");
